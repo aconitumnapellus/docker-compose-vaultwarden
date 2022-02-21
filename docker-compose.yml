@@ -1,0 +1,65 @@
+version: "3.8"
+
+
+
+services:
+  mariadb:
+    image: "mariadb:${MARIADB_VERSION}"
+    container_name: "${MARIADB_CONTAINER_NAME}"
+    hostname: "${MARIADB_HOSTNAME}"
+    restart: "always"
+    environment:
+      - "MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}"
+      - "MYSQL_PASSWORD=${MARIADB_PASSWORD}"
+      - "MYSQL_DATABASE=${MARIADB_DATABASE}"
+      - "MYSQL_USER=${MARIADB_USER}"
+    volumes:
+      - "db:/var/lib/mysql"
+      - "/etc/localtime:/etc/localtime:ro"
+    networks:
+      - db
+
+
+
+  vaultwarden:
+    image: "vaultwarden/server:${VAULTWARDEN_VERSION}"
+    container_name: "${VAULTWARDEN_CONTAINER_NAME}"
+    restart: "always"
+    environment:
+      - "DOMAIN=${DOMAIN}"
+      - "SIGNUPS_VERIFY=${SIGNUPS_VERIFY}"
+      - "SHOW_PASSWORD_HINT=${SHOW_PASSWORD_HINT}"
+      - "ORG_CREATION_USERS=${ORG_CREATION_USERS}"
+      - "EMERGENCY_ACCESS_ALLOWED=${EMERGENCY_ACCESS_ALLOWED}"
+      - "SMTP_HOST=${SMTP_HOST}"
+      - "SMTP_FROM=${SMTP_FROM}"
+      - "SMTP_FROM_NAME=${SMTP_FROM_NAME}"
+      - "SMTP_PORT=${SMTP_PORT}"
+      - "SMTP_SSL=${SMTP_SSL}"
+      - "WEBSOCKET_ENABLED=${WEBSOCKET_ENABLED}"
+      - "DATABASE_URL=mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@${MARIADB_HOSTNAME}/${MARIADB_DATABASE}"
+      - "ADMIN_TOKEN=${ADMIN_TOKEN}"
+      - "RUST_BACKTRACE=1"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vaultwarden.rule=Host(`${VAULTWARDEN_DOMAIN}`)"
+      - "traefik.http.routers.vaultwarden.entrypoints=websecure"
+      - "traefik.http.routers.vaultwarden.tls.certresolver=${TLS_RESOLVER}"
+    volumes:
+      - "data:/data"
+    networks:
+      - proxy
+      - db
+
+
+
+volumes:
+  db:
+  data:
+
+
+networks:
+  proxy:
+    name: traefik_default
+  db:
+    name: vaultwarden_default
